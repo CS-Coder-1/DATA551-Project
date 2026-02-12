@@ -28,6 +28,9 @@ ________________________________________
 ________________________________________
 ## Methods for resolving an impasse:
 Step 1: The group members will isolate areas of disagreement, and the group will come to a consensus. If no consensus is reached, proceed to Step 2.
+
 Step 2: The team will decide the relevance or importance of the dispute and may postpone the conflict if its relevance or importance is deemed questionable or minimal.
+
 Step 3: The team will decide the amount of time for discussion or arbitration before calling a vote.
+
 Step 4: The team will call a vote. If the vote is a stalemate, the team makes a final decision.
