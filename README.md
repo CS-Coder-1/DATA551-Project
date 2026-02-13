@@ -1,6 +1,6 @@
 ## Tech Job Tracker: Data Science Salary Dashboard
 ### Authors: Rachel Kamphuis, Avalvir Kaur Sekhon, Aaron Sukare, Hwimin Park
-### Dataset: [100K US Tech Jobs]( 100K US Tech Jobs (With Job Descriptions & Salary)
+### Dataset: [100K US Tech Jobs](https://www.kaggle.com/datasets/christopherkverne/100k-us-tech-jobs-winter-2024?resource=download&select=ds_jobs.xlsx)
 
 The app features a landing page that gives an overview of the U.S. tech job market using a sidebar for filtering and four main plot panels. 
 
