@@ -10,6 +10,8 @@ Due to the high volume of postings and a large range of salaries, is quite diffi
 
 ## 2. Description of the Data
 
+The dataset used is: [100K US Tech Jobs](https://www.kaggle.com/datasets/christopherkverne/100k-us-tech-jobs-winter-2024?resource=download&select=ds_jobs.xlsx)
+
 The dataset is broken down into 5 smaller datasets: Cyber Security, Software Engineering, IT, Product Management, and Data Science, each with their own spreadsheet. We want to focus on the Data Science dataset that includes 8935 job postings from sites such as Indeed or Zip Recruiter. Each posting has 35 associated variables, but the ones we want to focus on are the site the posting was found on (`site`), the job title and type of job (`title`, `job_type`), the company (`company`), location (`location`), the salary range (`min_amount`, `max_amount`, `mean_salary`), the size of the company (`company_num_employees`). 
 
 ## 3. Research Questions and Usage Scenarios
