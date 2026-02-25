@@ -60,7 +60,7 @@ def extract_experience(description, title = ""):
         return None
     description = description.lower()
     title = str(title).lower()
-    #handle a range like 5-7 years appears
+    #handle a range like 5-7 years
     range_match = re.search(r'\b(\d{1,2})\s*[-–]\s*(\d{1,2})\s*(?:years?|yrs?)\b', description)
     #average for ranges
     if range_match:
