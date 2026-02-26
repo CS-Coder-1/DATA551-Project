@@ -115,33 +115,57 @@ def company_size_clean(size):
         return None
 df["company_size_numeric"] = df["company_size"].apply(company_size_clean)
 
-#bar chart- top 10 high paying jobs
-
-
-
-
 
 #scatterplot- salary vs years of experience (sample of 5000 rows to fit altair limit, please change if possible)
 scatterplot = alt.Chart(df.sample(5000, random_state=42)).mark_point().encode(
-    x='years_experience',
-    y='mean_salary',
+    x=alt.X('years_experience:Q', title="Years of Experience"),
+    y=alt.Y('mean_salary:Q', title="Mean Salary"),
     tooltip=['title', 'years_experience', 'mean_salary']
+).properties(
+    width=350,
+    height=350
 )
 
-app = dash.Dash(__name__)
-app.layout = html.Div([
-        html.H3("Salary vs Years of Experience"),
-        html.Iframe(
-            srcDoc=scatterplot.to_html(),
-            style={'border-width': '0', 'width': '100%', 'height': '400px'})])
+#bar chart- top 10 high paying jobs
+top10_salary = df.nlargest(10, 'mean_salary')
+top10_salary['title'] = top10_salary['title'].str.title()
 
-
-
+bar_chart = alt.Chart(top10_salary).mark_bar().encode(
+    x=alt.X(
+        'title:N',
+        title='Title',
+        sort='-y',
+        axis=alt.Axis( labelAngle=-30)),
+    y=alt.Y('mean_salary:Q',
+        title="Mean Salary",
+        axis=alt.Axis(format='$,.0f'))
+).properties(
+    width=350,
+    height=350
+)
 
 #job distribution map
 
 
 #salaries per company size
 
+app = dash.Dash(__name__)
+app.layout = html.Div([
+    html.Div([
+        html.Div([
+            html.H3("Salary vs Years of Experience"),
+            html.Iframe(
+                srcDoc=scatterplot.to_html(),
+                style={'border-width': '0', 'width': '100%', 'height': '400px'})],
+            style={'width': '50%'}),
+        html.Div([
+            html.H3("Top 10 Jobs by Mean Salary"),
+            html.Iframe(
+                srcDoc=bar_chart.to_html(),
+                style={'border-width': '0', 'width': '100%', 'height': '400px'})],
+            style={'width': '50%'})
+    ], style={'display': 'flex', 'flexDirection': 'row'})
+])
+
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True)
