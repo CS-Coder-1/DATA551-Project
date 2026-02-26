@@ -126,6 +126,7 @@ scatterplot = alt.Chart(df.sample(5000, random_state=42)).mark_point().encode(
     height=350
 )
 
+# boxplot salary by company size
 boxplot = alt.Chart(df[df['company_num_employees'].notna() &
                        (df['company_num_employees'] != 'Decline to state')].sample(5000, random_state=42)).mark_boxplot(
     size=40,
@@ -135,7 +136,7 @@ boxplot = alt.Chart(df[df['company_num_employees'].notna() &
     x=alt.X('company_num_employees:O',
             title='Company Size',
             sort='-y',
-            axis=alt.Axis(labelAngle=-30)),  # ← angled labels
+            axis=alt.Axis(labelAngle=-30)),
     y=alt.Y('mean_salary:Q',
             title='Salary'),
     tooltip=[
@@ -169,9 +170,6 @@ bar_chart = alt.Chart(top10_salary).mark_bar().encode(
 )
 
 #job distribution map
-
-
-#salaries per company size
 
 app = dash.Dash(__name__)
 
