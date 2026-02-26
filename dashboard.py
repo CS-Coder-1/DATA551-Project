@@ -126,6 +126,30 @@ scatterplot = alt.Chart(df.sample(5000, random_state=42)).mark_point().encode(
     height=350
 )
 
+boxplot = alt.Chart(df[df['company_num_employees'].notna() &
+                       (df['company_num_employees'] != 'Decline to state')].sample(5000, random_state=42)).mark_boxplot(
+    size=40,
+    ticks=True,
+    outliers=True
+).encode(
+    x=alt.X('company_num_employees:O',
+            title='Company Size',
+            sort='-y',
+            axis=alt.Axis(labelAngle=-30)),  # ← angled labels
+    y=alt.Y('mean_salary:Q',
+            title='Salary'),
+    tooltip=[
+        'company_num_employees',
+        alt.Tooltip('mean_salary:Q', format='.0f', title='Salary'),
+    ]
+).properties(
+    width=600,
+    height=400,
+    title='Salary by Company Size'
+).configure_title(
+    fontSize=16
+)
+
 #bar chart- top 10 high paying jobs
 top10_salary = df.nlargest(10, 'mean_salary')
 top10_salary['title'] = top10_salary['title'].str.title()
@@ -150,6 +174,7 @@ bar_chart = alt.Chart(top10_salary).mark_bar().encode(
 #salaries per company size
 
 app = dash.Dash(__name__)
+
 app.layout = html.Div([
     html.Div([
         html.Div([
@@ -162,6 +187,14 @@ app.layout = html.Div([
             html.H3("Top 10 Jobs by Mean Salary"),
             html.Iframe(
                 srcDoc=bar_chart.to_html(),
+                style={'border-width': '0', 'width': '100%', 'height': '400px'})],
+            style={'width': '50%'})
+    ], style={'display': 'flex', 'flexDirection': 'row'}),
+    html.Div([
+        html.Div([
+            html.H3("Salaries per Company Size"),
+            html.Iframe(
+                srcDoc=boxplot.to_html(),
                 style={'border-width': '0', 'width': '100%', 'height': '400px'})],
             style={'width': '50%'})
     ], style={'display': 'flex', 'flexDirection': 'row'})
