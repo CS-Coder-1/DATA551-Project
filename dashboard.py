@@ -7,6 +7,8 @@ import altair as alt
 import dash_bootstrap_components as dbc
 import pandas as pd
 import re
+import plotly.express as px
+from dash import Input, Output
 
 #preprocessing
 
@@ -169,9 +171,44 @@ bar_chart = alt.Chart(top10_salary).mark_bar().encode(
     height=350
 )
 
-#job distribution map
+
+# Job distribution 
+
+job_map = px.choropleth(
+    df.groupby('state').size().reset_index(name='job_count'),
+    locations='state',
+    locationmode='USA-states',
+    color='job_count',
+    scope='usa',
+    color_continuous_scale='Blues',
+    labels={'job_count': 'Number of Jobs'},
+    title='Job Distribution by State'
+)
 
 app = dash.Dash(__name__)
+
+@app.callback(
+    Output('job-map', 'figure'),
+    Input('job-title-dropdown', 'value'),
+    Input('experience-slider', 'value')
+)
+def update_map(selected_job, max_experience):
+    filtered_df = df[df['years_experience'] <= max_experience]
+    
+    if selected_job:
+        filtered_df = filtered_df[filtered_df['title'] == selected_job]
+
+    fig = px.choropleth(
+        filtered_df.groupby('state').size().reset_index(name='job_count'),
+        locations='state',
+        locationmode='USA-states',
+        color='job_count',
+        scope='usa',
+        color_continuous_scale='Blues',
+        labels={'job_count': 'Number of Jobs'},
+        title='Job Distribution by State'
+    )
+    return fig
 
 app.layout = html.Div([
     html.Div([
@@ -195,7 +232,11 @@ app.layout = html.Div([
                 srcDoc=boxplot.to_html(),
                 style={'border-width': '0', 'width': '100%', 'height': '400px'})],
             style={'width': '50%'})
-    ], style={'display': 'flex', 'flexDirection': 'row'})
+    ], style={'display': 'flex', 'flexDirection': 'row'}),
+    html.Div([
+        html.H3("Job Distribution by State"),
+        dcc.Graph(id='job-map', figure=job_map)
+], style={'width': '100%', 'padding': '10px'})
 ])
 
 if __name__ == '__main__':
