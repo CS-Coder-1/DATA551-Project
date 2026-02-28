@@ -5,10 +5,13 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
 import textwrap
+import os
 
 alt.data_transformers.disable_max_rows()
 
-df = pd.read_csv("data/cleaned/ds_jobs.csv") #import clean data
+base_path = os.path.dirname(__file__)
+data_path = os.path.join(base_path, "..", "data", "cleaned", "ds_jobs.csv")
+df = pd.read_csv(data_path)
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 #company size cal
