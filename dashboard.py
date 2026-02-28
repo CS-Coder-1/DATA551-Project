@@ -1,243 +1,137 @@
-#load necessary libraries
 import dash
-from dash import html
-from dash import dcc
-from dash.dependencies import Input, Output
+from dash import html, dcc, Input, Output
 import altair as alt
 import dash_bootstrap_components as dbc
 import pandas as pd
-import re
 import plotly.express as px
-from dash import Input, Output
+import textwrap
 
-#preprocessing
+alt.data_transformers.disable_max_rows()
 
-df = pd.read_csv("ds_jobs.csv")
-#standardizing job titles
-df["title"] = df["title"].str.lower()
-df["title"] = df["title"].str.replace("sr.", "senior")
-df["title"] = df["title"].str.replace(r"\b(i|ii|iii)\b", "", regex=True)
-#grouping by job type
-def job_type(title):
-    title = str(title).lower()
-    if "data scientist" in title or "data science" in title:
-        return "Data Scientist"
-    elif "data engineer" in title or "data engineering" in title:
-        return "Data Engineer"
-    elif "data analyst" in title or "data analysis" in title or "analyst" in title:
-        return "Data Analyst"
-    elif "machine learning scientist" in title or "machine learning science" in title:
-        return "ML Scientist"
-    elif "machine learning engineer" in title or "ml engineer" in title or "ml engineering" in title or "machine learning engineering" in title:
-        return "ML Engineer"
-    elif "ai engineer" in title or "ai engineering" in title:
-        return "AI Engineer"
-    elif "ai/ml engineer" in title or "ai/ml engineering" in title:
-        return "AI/ML Engineer"
-    elif "deep learning" in title:
-        return "Deep Learning Engineer"
-    elif "big data engineer" in title or "big data engineering" in title:
-        return "Big Data Engineer"
-    elif "analytics engineer" in title or "analytics engineering" in title:
-        return "Analytics Engineer"
-    elif "business analyst" in title or "business analysis" in title:
-        return "Business Analyst"
-    elif "bi analyst" in title or "business intelligence" in title or "bi analysis" in title or "business intelligence analysis" in title:
-        return "Business Intelligence Analyst"
-    elif "software engineer" in title or "software engineering" in title:
-        return "Software Engineer"
-    elif "data manager" in title or "manager" in title or "data management" in title or "management" in title:
-        return "Data Manager"
-    elif "cloud" in title:
-        return "Cloud Engineer"
-    elif "database" in title or "db" in title:
-        return "Database Engineer"
+df = pd.read_csv("data/cleaned/ds_jobs.csv") #import clean data
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+#company size cal
+min_size = int(df['company_size_numeric'].min())
+max_size = int(df['company_size_numeric'].max())
+slider_marks = {}
+for i in range(0, max_size + 1, 10000):
+    if i > 0:
+        k_value = i // 1000
+        slider_marks[i] = str(k_value) + "k"
     else:
-        return "Other"
-df["job_type"] = df["title"].apply(job_type)
-#extract years of experience from description
-df["description"] = df["description"].str.lower()
-def extract_experience(description, title = ""):
-    if pd.isna(description):
-        return None
-    description = description.lower()
-    title = str(title).lower()
-    #handle a range like 5-7 years
-    range_match = re.search(r'\b(\d{1,2})\s*[-–]\s*(\d{1,2})\s*(?:years?|yrs?)\b', description)
-    #average for ranges
-    if range_match:
-        low, high = int(range_match.group(1)), int(range_match.group(2))
-        value = (low + high) / 2
-    else:
-        single_match = re.search(r'\b(\d{1,2})\+?\s*(?:years?|yrs?)\b', description)
-        if single_match:
-            value = float(single_match.group(1))
-        else:
-            return None
-    return value
-df["years_experience"] = df["description"].apply(extract_experience)
-#clean locations
-df["location"] = df["location"].str.strip()
-df[["part1", "part2", "part3"]] = df["location"].str.split(",", expand=True)
-df["part1"] = df["part1"].str.strip()
-df["part2"] = df["part2"].str.strip()
-df["part3"] = df["part3"].str.strip()
-df["state"] = df["part2"].fillna(df["part1"])
-df.loc[df["state"] == "US", "state"] = None
-df.loc[df["state"] == "Remote", "state"] = None
-#removes remote jobs from map
-df.loc[df["is_remote"] == True, "state"] = None
-jobs_per_state = (
-    df.groupby("state")
-      .size()
-      .reset_index(name="job_count")
-)
-#clean company size
-df["company_size"] = df["company_num_employees"].str.replace("employees", "", case=False).str.strip()
-def company_size_clean(size):
-    if pd.isna(size) or str(size).lower() == "decline to state":
-        return None
-    #remove commas
-    size = str(size).lower().replace(",", "")
-    if "-" in size:
-        parts = size.split("-")
-        low = int(parts[0])
-        high = int(parts[1])
-        return (low + high) / 2
-    if "to" in size:
-        parts = size.split(" to ")
-        low = int(parts[0].strip())
-        high = int(parts[1].strip())
-        return (low + high) / 2
-    if "+" in size:
-        return int(size.replace("+", ""))
-    try:
-        return int(size)
-    except:
-        return None
-df["company_size_numeric"] = df["company_size"].apply(company_size_clean)
+        slider_marks[i] = "1"
 
+#filters 
+sidebar = dbc.Col([
+    html.H5("Filters", className="pt-3 text-primary"),
+    html.Hr(),
+    #filter1
+    html.Label("Company Size", className="small font-weight-bold"),
+    dcc.RangeSlider(id='company-slider', min=min_size, max=max_size, step=500,value=[min_size, max_size],marks=slider_marks),
+    #filter2
+    html.Label("Job Titles (Select Multiple)", className="mt-4 small font-weight-bold"),
+    dbc.Button("Select All", id="select-all-btn", n_clicks=0, size="sm", color="link", className="p-0 mb-1"),
+    dcc.Input(id='search-box', type='text', placeholder='Search...', className="mb-2 w-100 form-control-sm"), 
+    html.Div([dcc.Checklist(id='job-title-checklist',options=[{'label': i, 'value': i} for i in sorted(df['job_type'].unique())], value=['Data Scientist'],labelStyle={'display': 'block', 'fontSize': '11px', 'margin-bottom': '5px'}),], style={'height': '25vh', 'overflowY': 'auto', 'border': '1px solid #dee2e6', 'padding': '10px', 'backgroundColor': 'white'}),
+    #filter3
+    html.Label("Experience Level", className="mt-4 small font-weight-bold"),
+    dcc.RadioItems(id='exp-radio',options=[{'label': 'Entry', 'value': 'Entry'}, {'label': 'Senior', 'value': 'Senior'}],value='Entry', labelStyle={'display': 'block', 'fontSize': '12px'}),], width=2, style={'height': '100vh', 'backgroundColor': '#f8f9fa', 'borderRight': '1px solid #dee2e6', 'padding': '20px'})
 
-#scatterplot- salary vs years of experience (sample of 5000 rows to fit altair limit, please change if possible)
-scatterplot = alt.Chart(df.sample(5000, random_state=42)).mark_point().encode(
-    x=alt.X('years_experience:Q', title="Years of Experience"),
-    y=alt.Y('mean_salary:Q', title="Mean Salary"),
-    tooltip=['title', 'years_experience', 'mean_salary']
-).properties(
-    width=350,
-    height=350
-)
+content = dbc.Col([
+    #row 1 30% height
+    dbc.Row([dbc.Col([html.Div(id='static-bar-container', style={'height': '30vh'})], width=12)], className="g-0"),
+    #row 2 35% height
+    dbc.Row([dbc.Col([html.Div(id='scatter-container', style={'height': '35vh'})], width=6),dbc.Col([dcc.Graph(id='job-map', style={'height': '35vh'}, config={'displayModeBar': False})], width=6),], className="g-0"),
+    #row 3 35% height 
+    dbc.Row([dbc.Col([html.Div(id='box-container', style={'height': '35vh'})], width=12)], className="g-0")], width=10, style={'height': '100vh', 'overflow': 'hidden', 'padding': '5px'})
 
-# boxplot salary by company size
-boxplot = alt.Chart(df[df['company_num_employees'].notna() &
-                       (df['company_num_employees'] != 'Decline to state')].sample(5000, random_state=42)).mark_boxplot(
-    size=40,
-    ticks=True,
-    outliers=True
-).encode(
-    x=alt.X('company_num_employees:O',
-            title='Company Size',
-            sort='-y',
-            axis=alt.Axis(labelAngle=-30)),
-    y=alt.Y('mean_salary:Q',
-            title='Salary'),
-    tooltip=[
-        'company_num_employees',
-        alt.Tooltip('mean_salary:Q', format='.0f', title='Salary'),
-    ]
-).properties(
-    width=600,
-    height=400,
-    title='Salary by Company Size'
-).configure_title(
-    fontSize=16
-)
-
-#bar chart- top 10 high paying jobs
-top10_salary = df.nlargest(10, 'mean_salary')
-top10_salary['title'] = top10_salary['title'].str.title()
-
-bar_chart = alt.Chart(top10_salary).mark_bar().encode(
-    x=alt.X(
-        'title:N',
-        title='Title',
-        sort='-y',
-        axis=alt.Axis( labelAngle=-30)),
-    y=alt.Y('mean_salary:Q',
-        title="Mean Salary",
-        axis=alt.Axis(format='$,.0f'))
-).properties(
-    width=350,
-    height=350
-)
-
-
-# Job distribution 
-
-job_map = px.choropleth(
-    df.groupby('state').size().reset_index(name='job_count'),
-    locations='state',
-    locationmode='USA-states',
-    color='job_count',
-    scope='usa',
-    color_continuous_scale='Blues',
-    labels={'job_count': 'Number of Jobs'},
-    title='Job Distribution by State'
-)
-
-app = dash.Dash(__name__)
+app.layout = dbc.Container([
+    dbc.Row([dbc.Col(html.H2("Data Science Job Market Dashboard", className="text-center py-3 text-white bg-primary mb-0"), width=12)], className="g-0"),
+    dbc.Row([sidebar, content], className="g-0")], fluid=True, style={'height': '100vh', 'overflow': 'hidden'})
 
 @app.callback(
-    Output('job-map', 'figure'),
-    Input('job-title-dropdown', 'value'),
-    Input('experience-slider', 'value')
+    [Output('static-bar-container', 'children'),
+     Output('scatter-container', 'children'),
+     Output('box-container', 'children'),
+     Output('job-map', 'figure')],
+    [Input('job-title-checklist', 'value'),  
+     Input('company-slider', 'value')]
 )
-def update_map(selected_job, max_experience):
-    filtered_df = df[df['years_experience'] <= max_experience]
+def update_dashboard(selected_job, size_range):
+    #bar chart- top 10 high paying jobs
+    filtered_df = df[(df['job_type'].isin(selected_job)) & 
+                 (df['company_size_numeric'] >= size_range[0]) & 
+                 (df['company_size_numeric'] <= size_range[1])]
+
+    top10_type_df = df.groupby('job_type')['mean_salary'].mean().nlargest(10).reset_index()
+    top10_type_df['job_type'] = top10_type_df['job_type'].str.title()
     
-    if selected_job:
-        filtered_df = filtered_df[filtered_df['title'] == selected_job]
+    top10_type_df['type_wrapped'] = top10_type_df['job_type'].apply(lambda x: textwrap.wrap(x, width=20)[:3])
+    
+    bar = alt.Chart(top10_type_df).mark_bar(color='#4c78a8').encode(x=alt.X('type_wrapped:N', sort='-y', title=None, axis=alt.Axis(labelAngle=0, labelPadding=20)),
+        y=alt.Y('mean_salary:Q', title="Average Mean Salary", axis=alt.Axis(format='$,.0f')),tooltip=['job_type', alt.Tooltip('mean_salary:Q', format='$,.0f')]).properties( width='container', height=200, title="Top 10 High Paying Jobs")
 
-    fig = px.choropleth(
+    #scatterplot- salary vs years of experience (sample of 5000 rows to fit altair limit, please change if possible)
+    scatter = alt.Chart(filtered_df.sample(min(len(filtered_df), 5000))).mark_point().encode(x=alt.X('years_experience:Q', title="Years of Experience"),
+        y=alt.Y('mean_salary:Q', title="Mean Salary"),
+    ).properties(width='container', height=200, title="Salary vs Experience")
+
+    # boxplot salary by company size
+    box = alt.Chart(filtered_df[filtered_df['company_num_employees'].notna()]).mark_boxplot(size=90,extent='min-max',color='#4c78a8').encode(
+        x=alt.X('company_num_employees:O', sort='-y', title='Company Size', axis=alt.Axis(labelAngle=-20)),
+        y=alt.Y('mean_salary:Q', title='Salary'),
+    ).properties(width='container', height=250, title="Salaries per Company Size")
+    
+    #map
+    map_fig = px.choropleth(
         filtered_df.groupby('state').size().reset_index(name='job_count'),
-        locations='state',
-        locationmode='USA-states',
-        color='job_count',
-        scope='usa',
-        color_continuous_scale='Blues',
-        labels={'job_count': 'Number of Jobs'},
-        title='Job Distribution by State'
+        locations='state', locationmode='USA-states', color='job_count',
+        scope='usa', color_continuous_scale='Blues'
     )
-    return fig
+    map_fig.update_layout(margin=dict(l=0, r=0, t=30, b=0), title_text="Job Distribution")
 
-app.layout = html.Div([
-    html.Div([
-        html.Div([
-            html.H3("Salary vs Years of Experience"),
-            html.Iframe(
-                srcDoc=scatterplot.to_html(),
-                style={'border-width': '0', 'width': '100%', 'height': '400px'})],
-            style={'width': '50%'}),
-        html.Div([
-            html.H3("Top 10 Jobs by Mean Salary"),
-            html.Iframe(
-                srcDoc=bar_chart.to_html(),
-                style={'border-width': '0', 'width': '100%', 'height': '400px'})],
-            style={'width': '50%'})
-    ], style={'display': 'flex', 'flexDirection': 'row'}),
-    html.Div([
-        html.Div([
-            html.H3("Salaries per Company Size"),
-            html.Iframe(
-                srcDoc=boxplot.to_html(),
-                style={'border-width': '0', 'width': '100%', 'height': '400px'})],
-            style={'width': '50%'})
-    ], style={'display': 'flex', 'flexDirection': 'row'}),
-    html.Div([
-        html.H3("Job Distribution by State"),
-        dcc.Graph(id='job-map', figure=job_map)
-], style={'width': '100%', 'padding': '10px'})
-])
+    return (
+        html.Iframe(srcDoc=bar.to_html(), style={'width': '100%', 'height': '100%', 'border': 'none', 'overflow': 'hidden'}),
+        html.Iframe(srcDoc=scatter.to_html(), style={'width': '100%', 'height': '100%', 'border': 'none', 'overflow': 'hidden'}),
+        html.Iframe(srcDoc=box.to_html(), style={'width': '100%', 'height': '100%', 'border': 'none', 'overflow': 'hidden'}),
+        map_fig
+    )
 
+@app.callback(
+    Output('job-title-checklist', 'value'),
+    Input('select-all-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def select_all_jobs(n_clicks):
+    return sorted(df['job_type'].unique())
+    
+@app.callback(
+    Output('job-title-checklist', 'options'),
+    Input('search-box', 'value')
+)
+
+def filter_job_titles(search_value):
+    all_jobs = df['job_type'].unique()
+    all_jobs = sorted(all_jobs)
+    
+    if search_value == "" or search_value is None:
+        results = []
+        for job in all_jobs:
+            option = {'label': job, 'value': job}
+            results.append(option)
+        return results
+    
+    filtered_jobs = []
+    for job in all_jobs:
+        if search_value.lower() in job.lower():
+            filtered_jobs.append(job)
+            
+    final_list = []
+    for job in filtered_jobs:
+        final_list.append({'label': job, 'value': job})
+        
+    return final_list
+    
 if __name__ == '__main__':
     app.run(debug=True)
