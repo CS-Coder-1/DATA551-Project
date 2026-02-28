@@ -78,3 +78,15 @@ def company_size_clean(size):
         return int(size)
     except:
         return None
+
+def experience_group(years):
+    if pd.isna(years):
+        return "Not Specified"
+    elif years <= 2:
+        return "Entry-Level"
+    elif years <= 5:
+        return "Mid-Level"
+    elif years <= 10:
+        return "Senior-Level"
+    else:
+        return "Executive-Level"

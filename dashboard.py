@@ -36,7 +36,7 @@ sidebar = dbc.Col([
     html.Div([dcc.Checklist(id='job-title-checklist',options=[{'label': i, 'value': i} for i in sorted(df['job_type'].unique())], value=['Data Scientist'],labelStyle={'display': 'block', 'fontSize': '11px', 'margin-bottom': '5px'}),], style={'height': '25vh', 'overflowY': 'auto', 'border': '1px solid #dee2e6', 'padding': '10px', 'backgroundColor': 'white'}),
     #filter3
     html.Label("Experience Level", className="mt-4 small font-weight-bold"),
-    dcc.RadioItems(id='exp-radio',options=[{'label': 'Entry', 'value': 'Entry'}, {'label': 'Senior', 'value': 'Senior'}],value='Entry', labelStyle={'display': 'block', 'fontSize': '12px'}),], width=2, style={'height': '100vh', 'backgroundColor': '#f8f9fa', 'borderRight': '1px solid #dee2e6', 'padding': '20px'})
+    dcc.RadioItems(id='exp-radio',options=[{'label': 'Entry-Level', 'value': 'Entry-Level'}, {'label': 'Mid-Level', 'value': 'Mid-Level'},{'label': 'Senior-Level', 'value': 'Senior-Level'},{'label': 'Executive-Level', 'value': 'Executive-Level'}],value='Entry-Level', labelStyle={'display': 'block', 'fontSize': '12px'}),], width=2, style={'height': '100vh', 'backgroundColor': '#f8f9fa', 'borderRight': '1px solid #dee2e6', 'padding': '20px'})
 
 content = dbc.Col([
     #row 1 30% height
@@ -56,13 +56,15 @@ app.layout = dbc.Container([
      Output('box-container', 'children'),
      Output('job-map', 'figure')],
     [Input('job-title-checklist', 'value'),  
-     Input('company-slider', 'value')]
+     Input('company-slider', 'value'),
+     Input('exp-radio', 'value')]
 )
-def update_dashboard(selected_job, size_range):
+def update_dashboard(selected_job, size_range, selected_exp):
     #bar chart- top 10 high paying jobs
     filtered_df = df[(df['job_type'].isin(selected_job)) & 
                  (df['company_size_numeric'] >= size_range[0]) & 
-                 (df['company_size_numeric'] <= size_range[1])]
+                 (df['company_size_numeric'] <= size_range[1]) &
+                 (df['experience_level'] == selected_exp)]
 
     top10_type_df = df.groupby('job_type')['mean_salary'].mean().nlargest(10).reset_index()
     top10_type_df['job_type'] = top10_type_df['job_type'].str.title()
