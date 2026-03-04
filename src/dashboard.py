@@ -1,5 +1,5 @@
 import dash
-from dash import html, dcc, Input, Output
+from dash import html, dcc, Input, Output, State
 import altair as alt
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -34,11 +34,18 @@ sidebar = dbc.Col([
     dcc.RangeSlider(id='company-slider', min=min_size, max=max_size, step=500,value=[min_size, max_size],marks=slider_marks),
     #filter2
     html.Label("Job Titles (Select Multiple)", className="mt-4 small font-weight-bold"),
-    dbc.Button("Select All", id="select-all-btn", n_clicks=0, size="sm", color="link", className="p-0 mb-1"),
+    dbc.ButtonGroup([
+        dbc.Button("Select All", id="select-all-btn", n_clicks=0, size="sm", color="link", className="p-0 me-2"),
+        dbc.Button("Clear All",  id="clear-all-btn",  n_clicks=0, size="sm", color="link", className="p-0 mb-1"),
+    ], vertical = True, className="mb-1"),
     dcc.Input(id='search-box', type='text', placeholder='Search...', className="mb-2 w-100 form-control-sm"), 
     html.Div([dcc.Checklist(id='job-title-checklist',options=[{'label': i, 'value': i} for i in sorted(df['job_type'].unique())], value=['Data Scientist'],labelStyle={'display': 'block', 'fontSize': '11px', 'margin-bottom': '5px'}),], style={'height': '25vh', 'overflowY': 'auto', 'border': '1px solid #dee2e6', 'padding': '10px', 'backgroundColor': 'white'}),
     #filter3
     html.Label("Experience Level", className="mt-4 small font-weight-bold"),
+    dbc.ButtonGroup([
+        dbc.Button("Any Level", id="any-exp-btn", n_clicks=0, size="sm", color="link", className="p-0 me-2"),
+        dbc.Button("Reset",     id="reset-exp-btn", n_clicks=0, size="sm", color="link", className="p-0 mb-1"),
+    ], vertical = True, className="mb-2"),
     dcc.RadioItems(id='exp-radio',options=[{'label': 'Entry-Level', 'value': 'Entry-Level'}, {'label': 'Mid-Level', 'value': 'Mid-Level'},{'label': 'Senior-Level', 'value': 'Senior-Level'},{'label': 'Executive-Level', 'value': 'Executive-Level'}],value='Entry-Level', labelStyle={'display': 'block', 'fontSize': '12px'}),], width=2, style={'height': '100vh', 'backgroundColor': '#f8f9fa', 'borderRight': '1px solid #dee2e6', 'padding': '20px'})
 
 content = dbc.Col([
@@ -54,6 +61,26 @@ app.layout = dbc.Container([
     dbc.Row([sidebar, content], className="g-0")], fluid=True, style={'height': '100vh', 'overflow': 'hidden'})
 
 @app.callback(
+    Output('exp-radio', 'value'),
+    [Input('any-exp-btn', 'n_clicks'),
+     Input('reset-exp-btn', 'n_clicks')],
+    prevent_initial_call=True
+)
+def update_exp_selection(any_clicks, reset_clicks):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise dash.exceptions.PreventUpdate
+    
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if triggered_id == 'any-exp-btn':
+        return 'ALL'
+    elif triggered_id == 'reset-exp-btn':
+        return 'Entry-Level'
+    
+    raise dash.exceptions.PreventUpdate
+
+@app.callback(
     [Output('static-bar-container', 'children'),
      Output('scatter-container', 'children'),
      Output('box-container', 'children'),
@@ -66,8 +93,10 @@ def update_dashboard(selected_job, size_range, selected_exp):
     #bar chart- top 10 high paying jobs
     filtered_df = df[(df['job_type'].isin(selected_job)) & 
                  (df['company_size_numeric'] >= size_range[0]) & 
-                 (df['company_size_numeric'] <= size_range[1]) &
-                 (df['experience_level'] == selected_exp)]
+                 (df['company_size_numeric'] <= size_range[1])]
+    
+    if selected_exp != 'ALL':
+        filtered_df = filtered_df[filtered_df['experience_level'] == selected_exp]
 
     top10_type_df = df.groupby('job_type')['mean_salary'].mean().nlargest(10).reset_index()
     top10_type_df['job_type'] = top10_type_df['job_type'].str.title()
@@ -83,10 +112,43 @@ def update_dashboard(selected_job, size_range, selected_exp):
     ).properties(width='container', height=200, title="Salary vs Experience")
 
     # boxplot salary by company size
-    box = alt.Chart(filtered_df[filtered_df['company_num_employees'].notna()]).mark_boxplot(size=90,extent='min-max',color='#4c78a8').encode(
-        x=alt.X('company_num_employees:O', sort='-y', title='Company Size', axis=alt.Axis(labelAngle=-20)),
+    def boxplot_df(filtered_df):
+        df_salary_per_company_size = filtered_df.copy()
+        df_salary_per_company_size = df_salary_per_company_size.dropna(subset=["company_num_employees"])
+
+        # remove rows with "Decline to state" for company_num_employees
+        df_salary_per_company_size = df_salary_per_company_size[df_salary_per_company_size["company_num_employees"] != "Decline to state"]
+
+        # combine "1", "1 to 50", "2 to 10", "11 to 50" into "1 to 50"
+        df_salary_per_company_size.loc[df_salary_per_company_size["company_num_employees"].isin(["1", "1 to 50", "2 to 10", "11 to 50"]), "company_num_employees"] = "1 to 50"
+
+        df_salary_per_company_size["company_num_employees"].unique()
+
+        size_order = [
+            '1 to 50',
+            '51 to 200',
+            '201 to 500',
+            '501 to 1,000',
+            '1,001 to 5,000',
+            '5,001 to 10,000',
+            '10,000+'
+        ]
+
+        df_salary_per_company_size['company_num_employees'] = pd.Categorical(
+            df_salary_per_company_size['company_num_employees'],
+            categories=size_order,
+            ordered=True
+        )
+
+        df_salary_per_company_size = df_salary_per_company_size.sort_values('company_num_employees')
+
+        return df_salary_per_company_size, size_order
+
+    df_salary_per_company_size, size_order = boxplot_df(filtered_df)
+    box = alt.Chart(df_salary_per_company_size[df_salary_per_company_size['company_num_employees'].notna()]).mark_boxplot(size=90,extent='min-max',color='#4c78a8').encode(
+        x=alt.X('company_num_employees:O', sort=size_order, title='Company Size', axis=alt.Axis(labelAngle=-20)),
         y=alt.Y('mean_salary:Q', title='Salary'),
-    ).properties(width='container', height=250, title="Salaries per Company Size")
+    ).properties(width='container', height=130, title="Salaries per Company Size")
     
     #map
     map_fig = px.choropleth(
@@ -105,11 +167,28 @@ def update_dashboard(selected_job, size_range, selected_exp):
 
 @app.callback(
     Output('job-title-checklist', 'value'),
-    Input('select-all-btn', 'n_clicks'),
+    [Input('select-all-btn', 'n_clicks'),
+     Input('clear-all-btn',  'n_clicks')],
+    [State('job-title-checklist', 'options'),
+     State('job-title-checklist', 'value')],
     prevent_initial_call=True
 )
-def select_all_jobs(n_clicks):
-    return sorted(df['job_type'].unique())
+def update_selection(select_all_clicks, clear_all_clicks, current_options, current_value):
+    ctx = dash.callback_context
+
+    if not ctx.triggered:
+        raise dash.exceptions.PreventUpdate
+
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if button_id == 'select-all-btn':
+        # select every job currently shown in the checklist
+        return [opt['value'] for opt in current_options if opt['value'] is not None]
+
+    elif button_id == 'clear-all-btn':
+        return []
+
+    raise dash.exceptions.PreventUpdate
     
 @app.callback(
     Output('job-title-checklist', 'options'),
