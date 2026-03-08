@@ -221,4 +221,4 @@ def filter_job_titles(search_value):
     return final_list
     
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
