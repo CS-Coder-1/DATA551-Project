@@ -12,7 +12,9 @@ alt.data_transformers.disable_max_rows()
 base_path = os.path.dirname(__file__)
 data_path = os.path.join(base_path, "..", "data", "cleaned", "ds_jobs.csv")
 df = pd.read_csv(data_path)
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, title="Data Science Job Market Dashboard", external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+server = app.server
 
 #company size cal
 min_size = int(df['company_size_numeric'].min())
