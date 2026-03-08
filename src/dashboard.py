@@ -11,7 +11,8 @@ alt.data_transformers.disable_max_rows()
 
 base_path = os.path.dirname(__file__)
 data_path = os.path.join(base_path, "..", "data", "cleaned", "ds_jobs.csv")
-df = pd.read_csv(data_path)
+df = pd.read_csv("../data/cleaned/ds_jobs.csv")
+df = df.sample(frac=0.25)
 app = dash.Dash(__name__, title="Data Science Job Market Dashboard", external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 server = app.server
