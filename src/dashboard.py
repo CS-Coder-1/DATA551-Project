@@ -11,7 +11,7 @@ alt.data_transformers.disable_max_rows()
 
 base_path = os.path.dirname(__file__)
 data_path = os.path.join(base_path, "..", "data", "cleaned", "ds_jobs.csv")
-df = pd.read_csv("../data/cleaned/ds_jobs.csv")
+df = pd.read_csv("data/cleaned/ds_jobs.csv")
 df = df.sample(frac=0.25)
 app = dash.Dash(__name__, title="Data Science Job Market Dashboard", external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -31,6 +31,12 @@ for i in range(0, max_size + 1, 10000):
 #filters 
 sidebar = dbc.Col([
     html.H5("Filters", className="pt-3 text-primary"),
+    html.Div([
+        html.Div([
+            html.I(className="bi bi-info-circle me-1", style={'fontSize': '9px'}),
+            "Filters apply to the Scatter Plot, Map, and Boxplot."
+        ], style={'fontSize': '9px', 'marginLeft': '-5px', 'marginRight': '0', 'padding': '0'})
+    ], className="mb-3 p-0"),
     html.Hr(),
     #filter1
     html.Label("Company Size", className="small font-weight-bold"),
@@ -151,13 +157,14 @@ def update_dashboard(selected_job, size_range, selected_exp):
     box = alt.Chart(df_salary_per_company_size[df_salary_per_company_size['company_num_employees'].notna()]).mark_boxplot(size=90,extent='min-max',color='#4c78a8').encode(
         x=alt.X('company_num_employees:O', sort=size_order, title='Company Size', axis=alt.Axis(labelAngle=-20)),
         y=alt.Y('mean_salary:Q', title='Salary'),
-    ).properties(width='container', height=130, title="Salaries per Company Size")
+    ).properties(width='container', height=115, title={"text": "Salaries per Company Size", "subtitle": "Box: Q1–Q3 | Line: Median | Whiskers: Min–Max"})
     
     #map
     map_fig = px.choropleth(
         filtered_df.groupby('state').size().reset_index(name='job_count'),
         locations='state', locationmode='USA-states', color='job_count',
-        scope='usa', color_continuous_scale='Blues'
+        scope='usa', color_continuous_scale='Blues',
+        labels = {'job_count': 'Job Count'}
     )
     map_fig.update_layout(margin=dict(l=0, r=0, t=30, b=0), title_text="Job Distribution")
 
