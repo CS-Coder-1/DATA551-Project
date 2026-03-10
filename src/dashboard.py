@@ -9,10 +9,7 @@ import os
 
 alt.data_transformers.disable_max_rows()
 
-base_path = os.path.dirname(__file__)
-data_path = os.path.join(base_path, "..", "data", "cleaned", "ds_jobs.csv")
-df = pd.read_csv("data/cleaned/ds_jobs.csv")
-df = df.sample(frac=0.25)
+df = pd.read_csv("../data/cleaned/ds_jobs.csv", usecols=["company_size_numeric", "company_num_employees", "job_type", "title", "state", "years_experience", "experience_level", "mean_salary"])
 app = dash.Dash(__name__, title="Data Science Job Market Dashboard", external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 server = app.server
@@ -21,12 +18,8 @@ server = app.server
 min_size = int(df['company_size_numeric'].min())
 max_size = int(df['company_size_numeric'].max())
 slider_marks = {}
-for i in range(0, max_size + 1, 10000):
-    if i > 0:
-        k_value = i // 1000
-        slider_marks[i] = str(k_value) + "k"
-    else:
-        slider_marks[i] = "1"
+slider_marks[min_size] = f"{min_size // 1000}"
+slider_marks[max_size] = f"{max_size // 1000}k"
 
 #filters 
 sidebar = dbc.Col([
@@ -48,7 +41,7 @@ sidebar = dbc.Col([
         dbc.Button("Clear All",  id="clear-all-btn",  n_clicks=0, size="sm", color="link", className="p-0 mb-1"),
     ], vertical = True, className="mb-1"),
     dcc.Input(id='search-box', type='text', placeholder='Search...', className="mb-2 w-100 form-control-sm"), 
-    html.Div([dcc.Checklist(id='job-title-checklist',options=[{'label': i, 'value': i} for i in sorted(df['job_type'].unique())], value=['Data Scientist'],labelStyle={'display': 'block', 'fontSize': '11px', 'margin-bottom': '5px'}),], style={'height': '25vh', 'overflowY': 'auto', 'border': '1px solid #dee2e6', 'padding': '10px', 'backgroundColor': 'white'}),
+    html.Div([dcc.Checklist(id='job-title-checklist',options=[{'label': i, 'value': i} for i in sorted(df['job_type'].unique())], value=['Data Scientist'],labelStyle={'display': 'block', 'fontSize': '12px', 'margin-bottom': '5px'}),], style={'height': '25vh', 'overflowY': 'auto', 'border': '1px solid #dee2e6', 'padding': '10px', 'backgroundColor': 'white'}),
     #filter3
     html.Label("Experience Level", className="mt-4 small font-weight-bold"),
     dbc.ButtonGroup([
@@ -112,13 +105,27 @@ def update_dashboard(selected_job, size_range, selected_exp):
     
     top10_type_df['type_wrapped'] = top10_type_df['job_type'].apply(lambda x: textwrap.wrap(x, width=20)[:3])
     
-    bar = alt.Chart(top10_type_df).mark_bar(color='#4c78a8').encode(x=alt.X('type_wrapped:N', sort='-y', title=None, axis=alt.Axis(labelAngle=0, labelPadding=20)),
+    bar = alt.Chart(top10_type_df).mark_bar(color='#ff7f0e').encode(x=alt.X('type_wrapped:N', sort='-y', title="Job", axis=alt.Axis(labelAngle=0, labelPadding=20)),
         y=alt.Y('mean_salary:Q', title="Average Mean Salary", axis=alt.Axis(format='$,.0f')),tooltip=['job_type', alt.Tooltip('mean_salary:Q', format='$,.0f')]).properties( width='container', height=200, title="Top 10 High Paying Jobs")
+    bar = bar.configure_axis(
+        labelFontSize=14,
+        titleFontSize=16
+    ).configure_title(
+        fontSize=18
+    ).configure_legend(
+        labelFontSize=13
+    )
 
     #scatterplot- salary vs years of experience (sample of 5000 rows to fit altair limit, please change if possible)
     scatter = alt.Chart(filtered_df.sample(min(len(filtered_df), 5000))).mark_point().encode(x=alt.X('years_experience:Q', title="Years of Experience"),
         y=alt.Y('mean_salary:Q', title="Mean Salary"),
     ).properties(width='container', height=200, title="Salary vs Experience")
+    scatter = scatter.configure_axis(
+        labelFontSize=14,
+        titleFontSize=16
+    ).configure_title(
+        fontSize=18
+    )
 
     # boxplot salary by company size
     def boxplot_df(filtered_df):
@@ -157,16 +164,37 @@ def update_dashboard(selected_job, size_range, selected_exp):
     box = alt.Chart(df_salary_per_company_size[df_salary_per_company_size['company_num_employees'].notna()]).mark_boxplot(size=90,extent='min-max',color='#4c78a8').encode(
         x=alt.X('company_num_employees:O', sort=size_order, title='Company Size', axis=alt.Axis(labelAngle=-20)),
         y=alt.Y('mean_salary:Q', title='Salary'),
-    ).properties(width='container', height=115, title={"text": "Salaries per Company Size", "subtitle": "Box: Q1–Q3 | Line: Median | Whiskers: Min–Max"})
+    ).properties(width='container', height=130, title={
+        "text": ["Salaries per Company Size", "(Whiskers: min to max values)"],
+        "subtitle": ["Box: Q1–Q3, Line: median"],
+        "anchor": "start",
+        "fontSize": 16,
+        "subtitleFontSize": 12,
+        "subtitleColor": "gray"
+    })
+    box = box.configure_axis(
+        labelFontSize=14,
+        titleFontSize=16,
+        labelAngle=-20             # you already have this, keep it
+    ).configure_title(
+        fontSize=18
+    )
     
     #map
     map_fig = px.choropleth(
         filtered_df.groupby('state').size().reset_index(name='job_count'),
         locations='state', locationmode='USA-states', color='job_count',
-        scope='usa', color_continuous_scale='Blues',
-        labels = {'job_count': 'Job Count'}
+        scope='usa', color_continuous_scale='Greens'
     )
-    map_fig.update_layout(margin=dict(l=0, r=0, t=30, b=0), title_text="Job Distribution")
+    job_counts_series = filtered_df.groupby('state').size()
+    min_count = job_counts_series.min()
+    max_count = job_counts_series.max()
+    map_fig.update_layout(margin=dict(l=0, r=0, t=30, b=0), title_text="Job Distribution", coloraxis_colorbar=dict(
+        title="Job Count",
+        tickmode='array',
+        tickvals=[min_count, (min_count + max_count)/2, max_count],
+        ticktext=[str(min_count), str(int((min_count + max_count)/2)), str(max_count)]
+    ))
 
     return (
         html.Iframe(srcDoc=bar.to_html(), style={'width': '100%', 'height': '100%', 'border': 'none', 'overflow': 'hidden'}),
@@ -228,4 +256,4 @@ def filter_job_titles(search_value):
     return final_list
     
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
