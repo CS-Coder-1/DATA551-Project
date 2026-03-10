@@ -24,6 +24,12 @@ slider_marks[max_size] = f"{max_size // 1000}k"
 #filters 
 sidebar = dbc.Col([
     html.H5("Filters", className="pt-3 text-primary"),
+    html.Div([
+        html.Div([
+            html.I(className="bi bi-info-circle me-1", style={'fontSize': '9px'}),
+            "Filters apply to the Scatter Plot, Map, and Boxplot."
+        ], style={'fontSize': '9px', 'marginLeft': '-5px', 'marginRight': '0', 'padding': '0'})
+    ], className="mb-3 p-0"),
     html.Hr(),
     #filter1
     html.Label("Company Size", className="small font-weight-bold"),
