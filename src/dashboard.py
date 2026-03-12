@@ -114,6 +114,10 @@ def update_dashboard(selected_job, size_range, selected_exp):
         fontSize=18
     ).configure_legend(
         labelFontSize=13
+    ).properties(
+        width=1200,
+        height=100,
+        padding={"top": 20, "left": 60, "right": 20}
     )
 
     #scatterplot- salary vs years of experience (sample of 5000 rows to fit altair limit, please change if possible)
