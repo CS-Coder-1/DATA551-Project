@@ -5,7 +5,7 @@
 
 **Dataset:** [100K US Tech Jobs](https://www.kaggle.com/datasets/christopherkverne/100k-us-tech-jobs-winter-2024?resource=download&select=ds_jobs.xlsx)
 
-The app features a landing page that gives an overview of the U.S. tech job market using a sidebar for filtering and four main plot panels. 
+The app features a landing page that gives an overview of the U.S. tech job market using a sidebar for filtering and four main plot panels. The dashboard as been optimized for viewing at 75% browser magnification.
 
 <img width="1017" height="711" alt="sketch" src="https://github.com/user-attachments/assets/dda45e01-683c-4854-bc19-c24f9533baad" />
 
