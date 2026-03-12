@@ -123,7 +123,7 @@ def update_dashboard(selected_job, size_range, selected_exp):
     )
 
     #scatterplot- salary vs years of experience (sample of 5000 rows to fit altair limit, please change if possible)
-    scatter = alt.Chart(filtered_df.sample(min(len(filtered_df), 5000))).mark_point().encode(
+    scatter = alt.Chart(df.sample(min(len(df), 5000))).mark_point().encode(
         x=alt.X('years_experience:Q', title="Years of Experience"),
         y=alt.Y('mean_salary:Q', title="Mean Salary"),
     ).properties(width='container', height=180, title="Salary vs Experience")
