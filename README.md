@@ -1,7 +1,7 @@
 ## Tech Job Tracker: Data Science Salary Dashboard
 **Authors:** Rachel Kamphuis, Avalvir Kaur Sekhon, Aaron Sukare, Hwimin Park
 
-To use our dashboard, please enter python src/dashboard.py in your terminal.
+[Click here to view our dashboard on Render](https://data551-project-sygg.onrender.com/)
 
 **Dataset:** [100K US Tech Jobs](https://www.kaggle.com/datasets/christopherkverne/100k-us-tech-jobs-winter-2024?resource=download&select=ds_jobs.xlsx)
 
