@@ -9,7 +9,7 @@ import os
 
 alt.data_transformers.disable_max_rows()
 
-df = pd.read_csv("../data/cleaned/ds_jobs.csv", usecols=["company_size_numeric", "company_num_employees", "job_type", "title", "state", "years_experience", "experience_level", "mean_salary"])
+df = pd.read_csv("./data/cleaned/ds_jobs.csv", usecols=["company_size_numeric", "company_num_employees", "job_type", "title", "state", "years_experience", "experience_level", "mean_salary"])
 app = dash.Dash(__name__, title="Data Science Job Market Dashboard", external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 server = app.server
@@ -105,24 +105,31 @@ def update_dashboard(selected_job, size_range, selected_exp):
     
     top10_type_df['type_wrapped'] = top10_type_df['job_type'].apply(lambda x: textwrap.wrap(x, width=20)[:3])
     
-    bar = alt.Chart(top10_type_df).mark_bar(color='#ff7f0e').encode(x=alt.X('type_wrapped:N', sort='-y', title="Job", axis=alt.Axis(labelAngle=0, labelPadding=20)),
-        y=alt.Y('mean_salary:Q', title="Average Mean Salary", axis=alt.Axis(format='$,.0f')),tooltip=['job_type', alt.Tooltip('mean_salary:Q', format='$,.0f')]).properties( width='container', height=200, title="Top 10 High Paying Jobs")
+    bar = alt.Chart(top10_type_df).mark_bar(color='steelblue').encode(
+        x=alt.X('type_wrapped:N', title=None, sort='-y', axis=alt.Axis(labelAngle=0, labelPadding=20)),
+        y=alt.Y('mean_salary:Q', title="Salary", scale=alt.Scale(domain=[140000, 220000], clamp=True), axis=alt.Axis(format='$,.0f')),tooltip=['job_type', alt.Tooltip('mean_salary:Q', format='$,.0f')])
     bar = bar.configure_axis(
         labelFontSize=14,
-        titleFontSize=16
+        titleFontSize=18
     ).configure_title(
         fontSize=18
     ).configure_legend(
         labelFontSize=13
+    ).properties(
+        title="Top 10 Highest Paying Jobs by Average Salary",
+        width=1200,
+        height=100,
+        padding={"top": 20, "left": 60, "right": 20}
     )
 
     #scatterplot- salary vs years of experience (sample of 5000 rows to fit altair limit, please change if possible)
-    scatter = alt.Chart(filtered_df.sample(min(len(filtered_df), 5000))).mark_point().encode(x=alt.X('years_experience:Q', title="Years of Experience"),
+    scatter = alt.Chart(filtered_df.sample(min(len(filtered_df), 5000))).mark_point().encode(
+        x=alt.X('years_experience:Q', title="Years of Experience"),
         y=alt.Y('mean_salary:Q', title="Mean Salary"),
-    ).properties(width='container', height=200, title="Salary vs Experience")
+    ).properties(width='container', height=180, title="Salary vs Experience")
     scatter = scatter.configure_axis(
         labelFontSize=14,
-        titleFontSize=16
+        titleFontSize=18
     ).configure_title(
         fontSize=18
     )
@@ -164,18 +171,18 @@ def update_dashboard(selected_job, size_range, selected_exp):
     box = alt.Chart(df_salary_per_company_size[df_salary_per_company_size['company_num_employees'].notna()]).mark_boxplot(size=90,extent='min-max',color='#4c78a8').encode(
         x=alt.X('company_num_employees:O', sort=size_order, title='Company Size', axis=alt.Axis(labelAngle=-20)),
         y=alt.Y('mean_salary:Q', title='Salary'),
-    ).properties(width='container', height=130, title={
+    ).properties(width='container', height=100, title={
         "text": ["Salaries per Company Size", "(Whiskers: min to max values)"],
         "subtitle": ["Box: Q1–Q3, Line: median"],
         "anchor": "start",
-        "fontSize": 16,
+        "fontSize": 18,
         "subtitleFontSize": 12,
         "subtitleColor": "gray"
     })
     box = box.configure_axis(
         labelFontSize=14,
-        titleFontSize=16,
-        labelAngle=-20             # you already have this, keep it
+        titleFontSize=18,
+        labelAngle=-20
     ).configure_title(
         fontSize=18
     )
@@ -256,4 +263,4 @@ def filter_job_titles(search_value):
     return final_list
     
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
