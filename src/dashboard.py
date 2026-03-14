@@ -113,10 +113,10 @@ def update_dashboard(selected_job, size_range, selected_exp):
     ).configure_title(
         fontSize=18
     ).configure_legend(
-        labelFontSize=13
+        labelFontSize=10
     ).properties(
-        width=1200,
-        height=100,
+        width=1000,
+        height=80,
         padding={"top": 20, "left": 60, "right": 20}
     )
 
@@ -168,7 +168,7 @@ def update_dashboard(selected_job, size_range, selected_exp):
     box = alt.Chart(df_salary_per_company_size[df_salary_per_company_size['company_num_employees'].notna()]).mark_boxplot(size=90,extent='min-max',color='#4c78a8').encode(
         x=alt.X('company_num_employees:O', sort=size_order, title='Company Size', axis=alt.Axis(labelAngle=-20)),
         y=alt.Y('mean_salary:Q', title='Salary'),
-    ).properties(width='container', height=130, title={
+    ).properties(width='container', height=80, title={
         "text": ["Salaries per Company Size", "(Whiskers: min to max values)"],
         "subtitle": ["Box: Q1–Q3, Line: median"],
         "anchor": "start",
